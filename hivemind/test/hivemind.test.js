@@ -90,3 +90,28 @@ test("AIP-01 rejects unknown agents and statuses", () => {
   assert.throws(() => createMessage({ workflowId: "w", from: "ROGUE", to: "SUPERVISOR", task: "X" }));
   assert.throws(() => createMessage({ workflowId: "w", from: "SUPERVISOR", to: "ENERGY", task: "X", status: "DONE" }));
 });
+
+test("mirror reassembly: chunked HCS messages rebuild into a valid AIP-01 chain; a missing chunk is reported", async () => {
+  const { reassemble } = await import("../src/mirror.js");
+  const { canonical } = await import("../src/aip01.js");
+  const r = await run(example("gold-dore-shipment.json"));
+  let seq = 0;
+  const rows = [];
+  r.messages.forEach((m, i) => {
+    const bytes = Buffer.from(canonical(m));
+    const total = Math.ceil(bytes.length / 1024);
+    for (let n = 1; n <= total; n++) {
+      rows.push({
+        sequence_number: ++seq,
+        message: bytes.subarray((n - 1) * 1024, n * 1024).toString("base64"),
+        chunk_info: { initial_transaction_id: { account_id: "0.0.10717267", transaction_valid_start: `1790000000.${i}` }, number: n, total },
+      });
+    }
+  });
+  assert.ok(rows.length > r.messages.length, "at least one message needs more than one chunk");
+  const rebuilt = reassemble(rows);
+  assert.equal(rebuilt.length, r.messages.length);
+  assert.equal(verifyChain(rebuilt.map((x) => x.message)), -1);
+  const missing = reassemble(rows.filter((x) => !(x.chunk_info.total > 1 && x.chunk_info.number === 2)));
+  assert.equal(missing.filter((x) => x.incomplete).length > 0, true);
+});

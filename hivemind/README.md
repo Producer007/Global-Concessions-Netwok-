@@ -32,9 +32,10 @@ The instrument register (`config/instruments.json`) mirrors the Token Register i
 ```bash
 cd hivemind
 npm install
-npm test                                              # 10 tests
+npm test                                              # 11 tests
 node bin/hivemind.js run examples/gold-dore-shipment.json   # dry run: nothing sent to Hedera
 node bin/hivemind.js verify runs/<file>.jsonl               # re-check a saved trail's hash chain
+node bin/hivemind.js verify-topic 0.0.10748998              # re-check the on-chain trail via the mirror node
 ```
 
 Example inputs (all fictional test data):
@@ -54,6 +55,20 @@ node bin/hivemind.js run examples/gold-dore-shipment.json --live
 ```
 
 `--live` creates an HCS topic (or reuses `HIVEMIND_TOPIC_ID`) and submits each AIP-01 message to it. It costs a small amount of testnet HBAR per message, prints the topic's mirror-node link, and refuses to run on any network except testnet or previewnet.
+
+HCS caps each topic message at 1,024 bytes. Larger AIP-01 messages (for example, a request carrying many sensor readings) are split into chunks, and each chunk takes its own sequence number, so a topic can show more sequence numbers than messages. `verify-topic` reassembles the chunks before checking the hash chain.
+
+### First live run: 27 Sep 2026
+
+| | |
+|---|---|
+| HCS audit topic | `0.0.10748998` (testnet) |
+| Operator | `0.0.10717267` |
+| Workflow | `track-and-tokenize`, `examples/gold-dore-shipment.json` (fictional test data) |
+| Result | Supply-Chain, offering and KYC checks OK; **halted `GATED` at Tokenization: $GOLD is Pre-Classification** |
+| Trail | 10 AIP-01 messages, hash chain valid, sequence numbers 1–11 (one message chunked) |
+
+No token was created or minted. The run shows the orchestration and the audit trail working on Hedera testnet; it is not a tokenization event.
 
 ## AIP-01 message format
 
