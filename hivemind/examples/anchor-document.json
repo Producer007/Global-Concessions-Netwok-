@@ -1,0 +1,7 @@
+{
+  "_note": "Anchors a document's SHA-256 to the audit trail. Only the hash is recorded, never the content. Point documentPath at a white paper or BFS draft to anchor it; the path is relative to the hivemind/ folder.",
+  "goal": "Anchor a document to the audit trail (example: the HiveMind README)",
+  "workflow": "anchor-document",
+  "documentPath": "README.md",
+  "label": "GCN HiveMind README"
+}

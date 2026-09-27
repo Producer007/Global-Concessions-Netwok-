@@ -1,0 +1,17 @@
+{
+  "name": "gcn-hivemind",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GCN HiveMind: six-agent Supervisor-Worker orchestration with an HCS audit trail. Pre-audit, testnet only.",
+  "bin": { "hivemind": "bin/hivemind.js" },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "hivemind": "node bin/hivemind.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@hashgraph/sdk": "^2.81.0",
+    "dotenv": "^16.4.5"
+  }
+}
