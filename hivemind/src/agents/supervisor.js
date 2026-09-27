@@ -23,7 +23,15 @@ export class Supervisor {
     this.agents = { CONSENSUS: consensus, ...agents };
   }
 
-  async run(input) {
+  async run(input, { planner = null } = {}) {
+    // A goal without a named workflow is routed by the planner (Claude); its choice and
+    // reason go into the PLAN message so the audit trail shows who decided what.
+    let planned = null;
+    if (!input.workflow && planner) {
+      planned = await planner(input.goal);
+      if (planned.workflow === "none") throw new Error(`No workflow fits this goal: ${planned.reason}`);
+      input = { ...input, workflow: planned.workflow };
+    }
     const plan = WORKFLOWS[input.workflow];
     if (!plan) throw new Error(`Unknown workflow "${input.workflow}". Known: ${Object.keys(WORKFLOWS).join(", ")}`);
     const workflowId = randomUUID();
@@ -37,7 +45,7 @@ export class Supervisor {
     };
 
     const steps = plan(input);
-    await send({ from: "SUPERVISOR", to: "SUPERVISOR", task: "PLAN", params: { goal: input.goal, workflow: input.workflow, steps: steps.map((s) => `${s.to}:${s.task}`) } });
+    await send({ from: "SUPERVISOR", to: "SUPERVISOR", task: "PLAN", params: { goal: input.goal, workflow: input.workflow, steps: steps.map((s) => `${s.to}:${s.task}`), plannedBy: planned ? { model: planned.model, reason: planned.reason } : "input" } });
 
     let halted = null;
     for (const step of steps) {
@@ -52,6 +60,6 @@ export class Supervisor {
 
     const outcome = halted ? "HALTED" : "COMPLETED";
     await send({ from: "SUPERVISOR", to: "SUPERVISOR", task: "REPORT", status: halted ? halted.status : "OK", result: { outcome, halted }, reason: halted?.reason ?? null });
-    return { workflowId, outcome, halted, messages, receipts, chainValid: verifyChain(messages) === -1 };
+    return { workflowId, workflow: input.workflow, planned, outcome, halted, messages, receipts, chainValid: verifyChain(messages) === -1 };
   }
 }

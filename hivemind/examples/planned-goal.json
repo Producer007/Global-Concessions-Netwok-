@@ -1,0 +1,7 @@
+{
+  "_note": "No \"workflow\" field: the planner (Claude) chooses one from the goal. Fictional test data.",
+  "goal": "We generated solar power at the test site last month. Log the kWh for NET8 accounting.",
+  "entries": [
+    { "siteId": "TEST-SOLAR-SITE", "periodStart": "2026-08-01", "periodEnd": "2026-08-31", "kWh": 11820 }
+  ]
+}

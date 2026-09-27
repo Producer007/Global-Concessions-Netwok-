@@ -10,10 +10,10 @@ This is the first code built against the *HiveMind Conceptual Agent Architecture
 
 | Agent | Hedera service | What runs today | What does not |
 |---|---|---|---|
-| Supervisor | none | Picks the workflow, runs steps in order, halts on the first non-OK result, reports | Free-text goal planning (workflows are named explicitly) |
+| Supervisor | none | Runs a workflow's steps in order, halts on the first non-OK result, reports. A plain-English goal with no named workflow is routed by the planner (Claude) | The planner choosing parameters or steps: it only picks a workflow name |
 | Consensus | HCS | Records every AIP-01 message; anchors a document's SHA-256 (never its content) | n/a |
 | Supply-Chain | HCS (via Consensus) | Validates custody sensor readings; flags range breaches and z-score spikes; halts on any anomaly | Live sensor feeds (readings come from the input file) |
-| Compliance | Smart Contract Service (planned) | Blocks retail-targeted offerings; checks counterparties against a KYC registry | A real KYC registry: `config/kyc-registry.testnet.json` is a **testnet stub** with fictional identities |
+| Compliance | Smart Contract Service | Blocks retail-targeted offerings; checks counterparties against the KYC registry contract on testnet (`KYC_REGISTRY_ADDRESS`), or the labelled stub list when unset | A deployed GCN KYC registry: none exists on testnet yet, so runs use the **testnet stub** (fictional identities) until one is |
 | Tokenization | HTS | Checks the instrument register; returns `GATED` for every instrument today | Any mint. The HTS mint path is **not implemented** |
 | Energy | HTS (planned) | NET8 energy-credit accounting: validates and totals kWh entries | A NET8 token or a kWh-to-credit rate (none has been set) |
 
@@ -32,7 +32,7 @@ The instrument register (`config/instruments.json`) mirrors the Token Register i
 ```bash
 cd hivemind
 npm install
-npm test                                              # 11 tests
+npm test                                              # 20 tests
 node bin/hivemind.js run examples/gold-dore-shipment.json   # dry run: nothing sent to Hedera
 node bin/hivemind.js verify runs/<file>.jsonl               # re-check a saved trail's hash chain
 node bin/hivemind.js verify-topic 0.0.10748998              # re-check the on-chain trail via the mirror node
@@ -46,6 +46,31 @@ Example inputs (all fictional test data):
 | `examples/retail-offering.json` | Halts at Compliance `CHECK_OFFERING`; Tokenization is never called |
 | `examples/net8-credits.json` | Completes: 12,500 kWh recorded, no token |
 | `examples/anchor-document.json` | Completes: this README's SHA-256 anchored |
+
+### Plain-English goals (planner)
+
+```bash
+node bin/hivemind.js plan "log last month's solar output for NET8 accounting"
+node bin/hivemind.js run examples/planned-goal.json      # input has no "workflow": the planner picks
+```
+
+The planner sends the goal to Claude (`claude-opus-5`, low effort, structured JSON output) and gets back one workflow name from a fixed list, or `none`, plus a one-sentence reason. Its choice and reason are written into the run's PLAN message, so the audit trail shows the model decided the route. Guard rails:
+
+- It only chooses a workflow name. It never sets parameters or runs a step, and the Supervisor still runs the workflow's fixed steps, so every gate still applies (a test checks that a planner-routed run still halts `GATED`).
+- An answer outside the list is rejected; `none` stops before anything runs.
+- Refusal fallbacks are on (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`): if the model declines on policy grounds, the API re-runs the request on Anthropic's recommended fallback model. A final refusal stops the run.
+- Needs `ANTHROPIC_API_KEY` in `.env`. Each plan is one short API call. Named workflows (`"workflow"` in the input) never call the API.
+
+### KYC registry contract
+
+Set these in `.env` and the Compliance Agent queries the contract instead of the stub:
+
+```bash
+KYC_REGISTRY_ADDRESS=0x...                 # the registry contract's EVM address on Hedera testnet
+KYC_REGISTRY_FUNCTION=isApproved(address)  # the contract's view function returning bool
+```
+
+Each counterparty must then be an EVM address. The check is a read-only `eth_call` through the Hedera JSON-RPC relay. It refuses to run unless the relay reports chain 296 (testnet) or 297 (previewnet), and any registry error halts the workflow at Compliance. The adapter is tested against a simulated relay; it has not yet been run against a real registry, because none is deployed on testnet.
 
 ### Live on Hedera testnet
 
