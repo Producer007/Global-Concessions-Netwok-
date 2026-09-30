@@ -1,7 +1,7 @@
 // Reads a HiveMind audit topic back from the Hedera mirror node and rebuilds the AIP-01
 // messages, reassembling any message the SDK split into chunks (HCS caps each chunk at
 // 1,024 bytes, and every chunk takes its own sequence number).
-const MIRRORS = {
+export const MIRRORS = {
   testnet: "https://testnet.mirrornode.hedera.com",
   previewnet: "https://previewnet.mirrornode.hedera.com",
 };

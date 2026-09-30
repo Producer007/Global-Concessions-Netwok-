@@ -32,7 +32,13 @@ const SCHEMA = {
 
 export class PlannerError extends Error {}
 
-export async function planGoal(goal, { client = new Anthropic(), model = PLANNER_MODEL } = {}) {
+// Keys not scoped to a workspace must name one on every request (anthropic-workspace-id).
+export function createClient(env = process.env) {
+  const workspaceId = env.ANTHROPIC_WORKSPACE_ID?.trim();
+  return new Anthropic(workspaceId ? { defaultHeaders: { "anthropic-workspace-id": workspaceId } } : {});
+}
+
+export async function planGoal(goal, { client = createClient(), model = PLANNER_MODEL } = {}) {
   if (!goal?.trim()) throw new PlannerError("Empty goal");
   let response;
   try {

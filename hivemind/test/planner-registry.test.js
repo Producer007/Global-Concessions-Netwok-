@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { AbiCoder } from "ethers";
+import { AbiCoder, Interface, getAddress } from "ethers";
 import { planGoal, PlannerError, PLANNER_MODEL } from "../src/planner.js";
 import { ContractRegistry, StubRegistry } from "../src/registry.js";
 import { createHiveMind, loadConfig } from "../src/hivemind.js";
@@ -116,4 +116,35 @@ test("stub registry is still the default and is labelled as a stub", async () =>
   const kyc = r.messages.find((m) => m.from === "COMPLIANCE" && m.task === "CHECK_COUNTERPARTIES");
   assert.match(kyc.result.registry, /testnet stub/);
   assert.ok(new StubRegistry({ approved: [] }));
+});
+
+test("createClient sends anthropic-workspace-id only when ANTHROPIC_WORKSPACE_ID is set", async () => {
+  const { createClient } = await import("../src/planner.js");
+  const scoped = createClient({ ANTHROPIC_WORKSPACE_ID: " wrkspc_test " });
+  assert.equal(scoped._options.defaultHeaders?.["anthropic-workspace-id"], "wrkspc_test");
+  const plain = createClient({});
+  assert.equal(plain._options.defaultHeaders?.["anthropic-workspace-id"], undefined);
+});
+
+test("contract registry: tiered view function passes the configured tier (deployed GCNKYCRegistry shape)", async () => {
+  const coder = AbiCoder.defaultAbiCoder();
+  const iface = new Interface(["function isKYCVerified(address,uint8) view returns (bool)"]);
+  const calls = [];
+  // Approves A only at tier <= 2, mimicking isKYCVerified(user, requiredTier).
+  const transport = async (_url, method, params) => {
+    if (method === "eth_chainId") return "0x128";
+    const [user, tier] = iface.decodeFunctionData("isKYCVerified", params[0].data);
+    calls.push({ user, tier: Number(tier) });
+    return coder.encode(["bool"], [user.toLowerCase() === A && Number(tier) <= 2]);
+  };
+  const reg = new ContractRegistry({ address: REG, fn: "isKYCVerified(address,uint8)", tier: "2", transport });
+  assert.equal(await reg.isApproved(A), true);
+  assert.equal(await reg.isApproved(B), false);
+  assert.deepEqual(calls[0], { user: getAddress(A), tier: 2 });
+  assert.match(reg.describe(), /isKYCVerified\(address,uint8\) tier 2 on Hedera testnet/);
+
+  const tier3 = new ContractRegistry({ address: REG, fn: "isKYCVerified(address,uint8)", tier: 3, transport });
+  assert.equal(await tier3.isApproved(A), false);
+  assert.throws(() => new ContractRegistry({ address: REG, fn: "isKYCVerified(address,uint8)" }), /KYC_REGISTRY_TIER/);
+  assert.throws(() => new ContractRegistry({ address: REG, fn: "isKYCVerified(address,uint8)", tier: 256 }), /KYC_REGISTRY_TIER/);
 });

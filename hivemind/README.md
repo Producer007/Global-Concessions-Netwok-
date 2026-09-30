@@ -13,7 +13,7 @@ This is the first code built against the *HiveMind Conceptual Agent Architecture
 | Supervisor | none | Runs a workflow's steps in order, halts on the first non-OK result, reports. A plain-English goal with no named workflow is routed by the planner (Claude) | The planner choosing parameters or steps: it only picks a workflow name |
 | Consensus | HCS | Records every AIP-01 message; anchors a document's SHA-256 (never its content) | n/a |
 | Supply-Chain | HCS (via Consensus) | Validates custody sensor readings; flags range breaches and z-score spikes; halts on any anomaly | Live sensor feeds (readings come from the input file) |
-| Compliance | Smart Contract Service | Blocks retail-targeted offerings; checks counterparties against the KYC registry contract on testnet (`KYC_REGISTRY_ADDRESS`), or the labelled stub list when unset | A deployed GCN KYC registry: none exists on testnet yet, so runs use the **testnet stub** (fictional identities) until one is |
+| Compliance | HTS / Smart Contract Service | Blocks retail-targeted offerings; checks counterparties against one of: native HTS KYC status for a token (`KYC_HTS_TOKEN_ID`), the KYC registry contract on testnet (`KYC_REGISTRY_ADDRESS`), or the labelled stub list when neither is set | Approved identities: `GCNKYCRegistry` is deployed on testnet (`0.0.8285495`) but has no verified addresses yet, so runs default to the **testnet stub** (fictional identities) |
 | Tokenization | HTS | Checks the instrument register; returns `GATED` for every instrument today | Any mint. The HTS mint path is **not implemented** |
 | Energy | HTS (planned) | NET8 energy-credit accounting: validates and totals kWh entries | A NET8 token or a kWh-to-credit rate (none has been set) |
 
@@ -25,14 +25,14 @@ This is the first code built against the *HiveMind Conceptual Agent Architecture
 | `energy-accounting` | Energy `RECORD_ENERGY_CREDITS` |
 | `anchor-document` | Consensus `ANCHOR_DOCUMENT` |
 
-The instrument register (`config/instruments.json`) mirrors the Token Register in the Platform Page Copy v2. All five instruments ($JETA, $GOLD, $BROWN, $NET8, $OIL) are gated, so `track-and-tokenize` always ends `HALTED at TOKENIZATION:MINT (GATED)` with the instrument's gate as the reason. That is the correct result today.
+The instrument register (`config/instruments.json`) mirrors the Token Register in the Platform Page Copy (v3, 28 Sep 2026; the register is unchanged from v2). All five instruments ($JETA, $GOLD, $BROWN, $NET8, $OIL) are gated, so `track-and-tokenize` always ends `HALTED at TOKENIZATION:MINT (GATED)` with the instrument's gate as the reason. That is the correct result today.
 
 ## Run
 
 ```bash
 cd hivemind
 npm install
-npm test                                              # 20 tests
+npm test                                              # 33 tests
 node bin/hivemind.js run examples/gold-dore-shipment.json   # dry run: nothing sent to Hedera
 node bin/hivemind.js verify runs/<file>.jsonl               # re-check a saved trail's hash chain
 node bin/hivemind.js verify-topic 0.0.10748998              # re-check the on-chain trail via the mirror node
@@ -59,18 +59,42 @@ The planner sends the goal to Claude (`claude-opus-5`, low effort, structured JS
 - It only chooses a workflow name. It never sets parameters or runs a step, and the Supervisor still runs the workflow's fixed steps, so every gate still applies (a test checks that a planner-routed run still halts `GATED`).
 - An answer outside the list is rejected; `none` stops before anything runs.
 - Refusal fallbacks are on (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`): if the model declines on policy grounds, the API re-runs the request on Anthropic's recommended fallback model. A final refusal stops the run.
-- Needs `ANTHROPIC_API_KEY` in `.env`. Each plan is one short API call. Named workflows (`"workflow"` in the input) never call the API.
+- Needs `ANTHROPIC_API_KEY` in `.env`. Each plan is one short API call. Named workflows (`"workflow"` in the input) never call the API. If your key is not scoped to a workspace, also set `ANTHROPIC_WORKSPACE_ID`.
+
+### Native HTS KYC (token KYC key)
+
+```bash
+KYC_HTS_TOKEN_ID=0.0.xxxxx     # an HTS token created with a KYC key, on Hedera testnet
+```
+
+The Compliance Agent then reads each counterparty's KYC status for that token from the testnet mirror node (`/api/v1/accounts/{id}/tokens?token.id=…`). Read-only; no key needed. A counterparty (Hedera account ID `0.0.x` or EVM address) passes only if its KYC is `GRANTED` and it is not `FROZEN` on the token. An account that never associated with the token, or does not exist, fails. It fails closed: a token with no KYC key, a missing token or a mirror-node error halts the run at Compliance. Setting both `KYC_HTS_TOKEN_ID` and `KYC_REGISTRY_ADDRESS` is refused.
+
+This is the network-enforced model from Hedera's [HTS KYC tutorial](https://docs.hedera.com/native/tutorials/tokens/hts-part2-kyc): KYC is granted per token, per account, by the token's KYC key. It does not apply to GCN's 19 Mar 2026 testnet contracts, which are ERC-20 smart contracts rather than HTS tokens. No GCN HTS token exists yet. On 29 Sep 2026 the check was run against a third-party testnet token with a KYC key (`0.0.10784685`): a holder with KYC granted passed, and an unassociated account failed.
 
 ### KYC registry contract
 
 Set these in `.env` and the Compliance Agent queries the contract instead of the stub:
 
 ```bash
-KYC_REGISTRY_ADDRESS=0x...                 # the registry contract's EVM address on Hedera testnet
-KYC_REGISTRY_FUNCTION=isApproved(address)  # the contract's view function returning bool
+KYC_REGISTRY_ADDRESS=0xB503f7f03B2f40d69f5C41D728FBC956c7Ea0A68   # GCNKYCRegistry, testnet 0.0.8285495
+KYC_REGISTRY_FUNCTION=isKYCVerified(address,uint8)                  # view function returning bool
+KYC_REGISTRY_TIER=2                                                 # required tier, for name(address,uint8) functions
 ```
 
-Each counterparty must then be an EVM address. The check is a read-only `eth_call` through the Hedera JSON-RPC relay. It refuses to run unless the relay reports chain 296 (testnet) or 297 (previewnet), and any registry error halts the workflow at Compliance. The adapter is tested against a simulated relay; it has not yet been run against a real registry, because none is deployed on testnet.
+`KYC_REGISTRY_FUNCTION` accepts `name(address)` or a tiered `name(address,uint8)`; the tiered form needs `KYC_REGISTRY_TIER`.
+
+Each counterparty must then be an EVM address. The check is a read-only `eth_call` through the Hedera JSON-RPC relay. It refuses to run unless the relay reports chain 296 (testnet) or 297 (previewnet), and any registry error halts the workflow at Compliance. On 29 Sep 2026 the adapter queried the deployed `GCNKYCRegistry` (pre-audit, deployed 19 Mar 2026) on testnet: the chain check passed and `isKYCVerified(address, 2)` returned `false` for every address tried, because no address has been approved yet. Approving test addresses needs the registry owner, account `0.0.8204402` (see *Approving test addresses* below); HiveMind's operator `0.0.10717267` is a different account. Until addresses are approved, pointing HiveMind at the registry halts every run at Compliance, which is correct.
+
+### Approving test addresses on the registry
+
+`scripts/approve-kyc.js` approves throwaway test addresses on the deployed registry so the Compliance Agent has something real to check. **The deployed registry is not the `GCNKYCRegistry.sol` in gcn-exchange**: its interface was read from the on-chain bytecode (no verified source exists). It is Ownable, approves with `verifyInvestor(address,uint8,string,uint256)` (owner or authorized verifier) and checks with `isKYCVerified(address,uint8)`. Owner: account `0.0.8204402` (EVM `0xd74265b1…c548`), not HiveMind's operator.
+
+```bash
+node scripts/approve-kyc.js --generate 2            # dry run: checks testnet, owner, simulates; sends nothing
+node scripts/approve-kyc.js --generate 2 --send     # needs KYC_ADMIN_KEY (owner's ECDSA key) in .env
+```
+
+`--send` sends one approval per address (TIER_2, jurisdiction `TEST`, 30-day expiry by default), reads each one back and prints FAILED if it did not take effect. With two or more approvals it writes `examples/gold-dore-shipment-registry.json` using those addresses and prints the command to run HiveMind against the registry. Approvals are testnet fixtures, not KYC decisions about any person.
 
 ### Live on Hedera testnet
 
