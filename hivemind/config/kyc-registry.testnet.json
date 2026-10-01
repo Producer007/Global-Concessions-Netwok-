@@ -1,0 +1,4 @@
+{
+  "_status": "TESTNET STUB. Not a KYC system. Stands in for the GCN KYC registry contract, which is pre-audit and not deployed. Entries are fictional test identities.",
+  "approved": ["TEST-COUNTERPARTY-A", "TEST-COUNTERPARTY-B"]
+}

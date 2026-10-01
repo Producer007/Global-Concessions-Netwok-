@@ -1,0 +1,13 @@
+{
+  "_status": "Workflow policy, not legal advice. Every rule here halts a workflow; none authorizes one.",
+  "network": "testnet",
+  "offering": {
+    "blockedInvestorClasses": ["retail"],
+    "reason": "Offering a security token to retail investors requires registration or a valid exemption, which is not in scope for GCN. Target accredited or institutional investors only, subject to counsel."
+  },
+  "sensors": {
+    "ranges": { "temperatureC": [-20, 60], "humidityPct": [0, 100] },
+    "anomalyZ": 3,
+    "anomalyWindow": 8
+  }
+}

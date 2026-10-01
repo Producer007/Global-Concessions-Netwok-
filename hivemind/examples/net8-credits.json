@@ -1,0 +1,8 @@
+{
+  "_note": "Fictional test entries. NET8/USD is an internal testnet index, not a confirmed Chainlink feed. No NET8 token exists.",
+  "goal": "Record NET8 energy-credit accounting entries",
+  "workflow": "energy-accounting",
+  "entries": [
+    { "siteId": "TEST-SOLAR-SITE", "periodStart": "2026-09-01", "periodEnd": "2026-09-30", "kWh": 12500 }
+  ]
+}

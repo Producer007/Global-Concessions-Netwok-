@@ -1,0 +1,10 @@
+{
+  "_source": "GCN Platform Page Copy v2 (24 Sep 2026), Token Register. No instrument has been issued. Tickers are working names.",
+  "instruments": {
+    "JETA":  { "name": "Jet fuel procurement", "status": "Gated", "gateCleared": false, "gate": "SPE-PRMS certification by an Independent Petroleum Engineer" },
+    "GOLD":  { "name": "GCN-GOLD (gold doré)", "status": "Pre-Classification", "gateCleared": false, "gate": "Written legal opinion on classification (fiat-referenced vs commodity-backed); custodian not appointed" },
+    "BROWN": { "name": "Copper, Berbera (GCN-DEAL-2026-009)", "status": "Gated", "gateCleared": false, "gate": "Qualified Person / technical-report status confirmed in writing" },
+    "NET8":  { "name": "African solar energy credits", "status": "Gated", "gateCleared": false, "gate": "Named solar asset; carbon registry (Verra or Gold Standard); protocol partner confirmed" },
+    "OIL":   { "name": "Oil settlement layer (Pecan Energies, AFC-operated)", "status": "Gated", "gateCleared": false, "gate": "AFC's written confirmation of GCN's settlement role" }
+  }
+}

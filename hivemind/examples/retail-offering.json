@@ -1,0 +1,13 @@
+{
+  "_note": "Negative test: a retail-targeted offering must halt at the Compliance Agent.",
+  "goal": "Prepare token offering for US retail investors",
+  "workflow": "track-and-tokenize",
+  "shipmentId": "TEST-SHIPMENT-002",
+  "instrument": "BROWN",
+  "amount": 10,
+  "investorClass": "retail",
+  "counterparties": ["TEST-COUNTERPARTY-A"],
+  "readings": [
+    { "ts": "2026-09-27T08:00:00Z", "lat": 10.43, "lon": 45.01, "temperatureC": 30.1, "humidityPct": 40 }
+  ]
+}
