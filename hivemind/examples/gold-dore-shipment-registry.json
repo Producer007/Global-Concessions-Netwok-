@@ -1,0 +1,77 @@
+{
+  "_note": "Hypothetical illustration from the HiveMind Architecture Overview (27 Sep 2026). Fictional data. Not a live shipment. Counterparties are throwaway test addresses approved on the testnet GCNKYCRegistry at TIER_2 on 2026-09-30; they expire after 30 days.",
+  "goal": "Track and tokenize a gold doré shipment",
+  "workflow": "track-and-tokenize",
+  "shipmentId": "TEST-SHIPMENT-001",
+  "instrument": "GOLD",
+  "amount": 50,
+  "counterparties": [
+    "0x16efBfdAFae90E16AdA72e10C95f4c49459C724E",
+    "0x23fCFb8bF04f14A1BF4346593B819379e0F5ee12"
+  ],
+  "readings": [
+    {
+      "ts": "2026-09-27T08:00:00Z",
+      "lat": 9.44,
+      "lon": 44.06,
+      "temperatureC": 24.1,
+      "humidityPct": 61
+    },
+    {
+      "ts": "2026-09-27T09:00:00Z",
+      "lat": 9.52,
+      "lon": 44.21,
+      "temperatureC": 24.4,
+      "humidityPct": 60
+    },
+    {
+      "ts": "2026-09-27T10:00:00Z",
+      "lat": 9.61,
+      "lon": 44.37,
+      "temperatureC": 24,
+      "humidityPct": 62
+    },
+    {
+      "ts": "2026-09-27T11:00:00Z",
+      "lat": 9.7,
+      "lon": 44.52,
+      "temperatureC": 24.3,
+      "humidityPct": 61
+    },
+    {
+      "ts": "2026-09-27T12:00:00Z",
+      "lat": 9.79,
+      "lon": 44.68,
+      "temperatureC": 24.2,
+      "humidityPct": 60
+    },
+    {
+      "ts": "2026-09-27T13:00:00Z",
+      "lat": 9.88,
+      "lon": 44.83,
+      "temperatureC": 24.5,
+      "humidityPct": 62
+    },
+    {
+      "ts": "2026-09-27T14:00:00Z",
+      "lat": 9.97,
+      "lon": 44.99,
+      "temperatureC": 24.1,
+      "humidityPct": 61
+    },
+    {
+      "ts": "2026-09-27T15:00:00Z",
+      "lat": 10.06,
+      "lon": 45.14,
+      "temperatureC": 24.3,
+      "humidityPct": 60
+    },
+    {
+      "ts": "2026-09-27T16:00:00Z",
+      "lat": 10.15,
+      "lon": 45.3,
+      "temperatureC": 24.4,
+      "humidityPct": 60
+    }
+  ]
+}

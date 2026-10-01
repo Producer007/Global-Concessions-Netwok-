@@ -119,6 +119,19 @@ HCS caps each topic message at 1,024 bytes. Larger AIP-01 messages (for example,
 
 No token was created or minted. The run shows the orchestration and the audit trail working on Hedera testnet; it is not a tokenization event.
 
+### Second live run: KYC checked against the deployed registry, 30 Sep 2026
+
+| | |
+|---|---|
+| Registry | `GCNKYCRegistry` `0xB503…0A68` (`0.0.8285495`, pre-audit), `isKYCVerified(address,uint8)` at tier 2 |
+| Approvals | Two throwaway test addresses approved by the registry owner via `scripts/approve-kyc.js` (TIER_2, jurisdiction `TEST`, 30-day validity, expire ~30 Oct 2026). Tx `0xe3da34ba…eeda`, `0x9ec8b3af…5ac7` |
+| Workflow | `track-and-tokenize`, `examples/gold-dore-shipment-registry.json` (fictional shipment data) |
+| Result | Compliance `CHECK_COUNTERPARTIES` OK against the contract (2 checked, 0 missing); **halted `GATED` at Tokenization: $GOLD is Pre-Classification** |
+| Trail | HCS topic `0.0.10748998`, sequence 12–22; workflow `83eecbdf…`; `verify-topic` reports both workflows' hash chains valid |
+| Negative check | Same input with one unapproved address (dry run): halted `FAIL` at `CHECK_COUNTERPARTIES`, Tokenization never called |
+
+The approved addresses are test fixtures, not KYC decisions about any person. No token was created or minted.
+
 ## AIP-01 message format
 
 ```json
